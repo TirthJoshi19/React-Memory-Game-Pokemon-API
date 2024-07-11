@@ -12,12 +12,13 @@ export function App() {
     const [isFetching, setIsFetching] = useState(false)
     const [display, setDisplay] = useState('');
     const [cardDisplay, setCardDisplay] = useState('')
-    console.log(isFetching)
+    const [scoreDisplay, setScoreDisplay] = useState('')
     const [recentPokemons, setRecentPokemons] = useState([])
 
     useEffect(() => {
         fetchInitialImages();
         setDisplay('none')
+        setScoreDisplay('none')
     }, []);
 
     async function fetchInitialImages() {
@@ -72,35 +73,36 @@ export function App() {
     return (
         <div className="difficulty">
             {showHeading && <Heading headNumber={2} text="Select a difficulty level:" />}
-            <BtnDiv setNumOfCards={setNumOfCards} setShowHeading={setShowHeading} />
+            <BtnDiv setNumOfCards={setNumOfCards} setShowHeading={setShowHeading} setScoreDisplay={setScoreDisplay}/>
             <div className="card-container">
                 <Cards numOfCards={numOfCards} cards={cards} fetchRandomPokemon={fetchRandomPokemon} setCards={setCards} setScore={setScore} bestScore={bestScore}setBestScore={setBestScore} fetchInitialImages={fetchInitialImages} setDisplay={setDisplay} cardDisplay={cardDisplay} setCardDisplay={setCardDisplay} />
                 <LostGame display={display} restartOnclick={()=> {
-                    restartOnclick(fetchInitialImages, setDisplay, setCardDisplay)
+                    restartOnclick(fetchInitialImages, setDisplay, setCardDisplay, setScoreDisplay)
                 }}/>
             </div>
-            <ScoreCard score={score} bestScore={bestScore} />
+            <ScoreCard score={score} bestScore={bestScore} display={scoreDisplay}/>
         </div>
     );
 }
 
-function BtnDiv({ setNumOfCards, setShowHeading }) {
+function BtnDiv({ setNumOfCards, setShowHeading, setScoreDisplay }) {
     const div = useRef(true);
     return (
         <div className="difficulty-btn-div" ref={div}>
-            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Easy" num={3} setShowHeading={setShowHeading} />
-            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Medium" num={5} setShowHeading={setShowHeading} />
-            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Hard" num={7} setShowHeading={setShowHeading} />
+            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Easy" num={3} setShowHeading={setShowHeading} setScoreDisplay={setScoreDisplay}/>
+            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Medium" num={5} setShowHeading={setShowHeading} setScoreDisplay={setScoreDisplay}/>
+            <DifficultyButton setNumOfCards={setNumOfCards} difficulty="Hard" num={7} setShowHeading={setShowHeading} setScoreDisplay={setScoreDisplay}/>
         </div>
     );
 
-    function DifficultyButton({ setNumOfCards, difficulty, num, setShowHeading }) {
+    function DifficultyButton({ setNumOfCards, difficulty, num, setShowHeading, setScoreDisplay }) {
         return <button onClick={handleClick}>{difficulty}</button>;
 
         function handleClick() {
             setNumOfCards(num);
             div.current.style.display = "none";
             setShowHeading(false);
+            setScoreDisplay('flex')
         }
     }
 }
@@ -154,14 +156,15 @@ function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, best
             cardRefs.current.forEach(card => card.classList.add("clicked"));
 
             setTimeout(async () => {
-                const newPokemon = await fetchRandomPokemon();
-                const newCard = {
-                    url: newPokemon.sprites.front_default,
-                    name: capFirst(newPokemon.name),
-                    type: capFirst(newPokemon.types[0].type.name)
-                };
-                const updatedCards = cards.map((card, i) => (i === index ? newCard : card));
-                setCards(updatedCards);
+                const newPokemons = await Promise.all(Array.from({length: numOfCards}, fetchRandomPokemon))
+
+                const newCards = newPokemons.map(pokemon => ({
+                    url: pokemon.sprites.front_default,
+                    name: capFirst(pokemon.name),
+                    type: capFirst(pokemon.types[0].type.name)
+                }))
+                
+                setCards(newCards);
 
                 // Remove 'clicked' class from all cards
                 cardRefs.current.forEach(card => card.classList.remove("clicked"));
@@ -197,10 +200,11 @@ function resetGame(setScore, setClickedPokemon, fetchInitialImages){
     
 }
 
-function restartOnclick(fetchInitialImages, setDisplay, setCardDisplay){
+function restartOnclick(fetchInitialImages, setDisplay, setCardDisplay, setScoreDisplay){
     
     fetchInitialImages();
     setDisplay('none')
     setCardDisplay('block')
+    
     click = true
 }
