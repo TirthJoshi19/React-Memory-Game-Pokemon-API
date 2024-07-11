@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Heading from "./Heading";
 import { ScoreCard } from "./score";
+import LostGame from "./LostGame";
 
 export function App() {
     const [numOfCards, setNumOfCards] = useState(0);
@@ -8,12 +9,15 @@ export function App() {
     const [cards, setCards] = useState([]);
     const [score, setScore] = useState(0);
     const [bestScore, setBestScore] = useState(0)
-    const [isFetching, setIsFetching] = useState(null)
-    
+    const [isFetching, setIsFetching] = useState(false)
+    const [display, setDisplay] = useState('');
+    const [cardDisplay, setCardDisplay] = useState('')
+    console.log(isFetching)
     const [recentPokemons, setRecentPokemons] = useState([])
 
     useEffect(() => {
         fetchInitialImages();
+        setDisplay('none')
     }, []);
 
     async function fetchInitialImages() {
@@ -37,7 +41,7 @@ export function App() {
              "Pikachu", "Squirtle", "Charmander", "Bulbasaur", "Jigglypuff", "Meowth", "Psyduck", "Eevee", "Snorlax",
         "Gengar", "Machop", "Mankey", "Onix", "Pidgey", "Rattata", "Vulpix", "Abra", "Geodude", "Gyarados",
         "Lapras", "Magikarp", "Growlithe", "Poliwag", "Oddish", "Diglett", "Doduo", "Seel", "Grimer", "Voltorb",
-        "Sandshrew", "Clefairy", "Zubat", "Ekans", "Nidoran", "Vaporeon", "Jolteon", "Flareon", "Ponyta",
+        "Sandshrew", "Clefairy", "Zubat", "Ekans", "Vaporeon", "Jolteon", "Flareon", "Ponyta",
         "Magnemite", "Dewgong", "Cubone", "Hitmonlee", "Hitmonchan", "Koffing", "Rhyhorn",
         "Horsea", "Staryu", "Scyther", "Jynx", "Electabuzz", "Magmar", "Pinsir", "Tauros", "Ditto", "Aerodactyl",
         "Articuno", "Zapdos", "Moltres", "Dratini", "Dragonair", "Dragonite", "Mewtwo", "Mew"
@@ -70,7 +74,10 @@ export function App() {
             {showHeading && <Heading headNumber={2} text="Select a difficulty level:" />}
             <BtnDiv setNumOfCards={setNumOfCards} setShowHeading={setShowHeading} />
             <div className="card-container">
-                <Cards numOfCards={numOfCards} cards={cards} fetchRandomPokemon={fetchRandomPokemon} setCards={setCards} setScore={setScore} bestScore={bestScore}setBestScore={setBestScore} fetchInitialImages={fetchInitialImages} isFetching={isFetching} />
+                <Cards numOfCards={numOfCards} cards={cards} fetchRandomPokemon={fetchRandomPokemon} setCards={setCards} setScore={setScore} bestScore={bestScore}setBestScore={setBestScore} fetchInitialImages={fetchInitialImages} setDisplay={setDisplay} cardDisplay={cardDisplay} setCardDisplay={setCardDisplay} />
+                <LostGame display={display} restartOnclick={()=> {
+                    restartOnclick(fetchInitialImages, setDisplay, setCardDisplay)
+                }}/>
             </div>
             <ScoreCard score={score} bestScore={bestScore} />
         </div>
@@ -99,20 +106,20 @@ function BtnDiv({ setNumOfCards, setShowHeading }) {
 }
 
 
+let click = true;
 
-function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, bestScore, setBestScore, fetchInitialImages, isFetching}) {
+function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, bestScore, setBestScore, fetchInitialImages, setDisplay, cardDisplay, setCardDisplay}) {
     const cardRefs = useRef([]);
     const [clickedPokemon, setClickedPokemon] = useState([]);
 
+    
     useEffect(() => {
         cardRefs.current.forEach((card, i) => {
             if (card) {
                 card.onclick = null;
                 card.onclick = ()=>{
-                    if(isFetching){
-                        setTimeout(() => {
-                            handleCardClick(i)
-                        }, 2000);
+                    if(click === false){
+                        return
                     } else {
                         handleCardClick(i)
                     }
@@ -122,15 +129,14 @@ function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, best
     }, [numOfCards, cards]);
 
     async function handleCardClick(index) {
-        
-       
+     
+       click = false
         const clickedName = cards[index].name;
 
         if (clickedPokemon.includes(clickedName)) {
-            alert("YOU LOSE");
-            setScore(0);
-            setClickedPokemon([]);
-            setBestScore(bestScore);
+            
+            setDisplay('block')
+            setCardDisplay('none')
             resetGame(setScore, setClickedPokemon, fetchInitialImages)
             
         } else {
@@ -159,6 +165,7 @@ function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, best
 
                 // Remove 'clicked' class from all cards
                 cardRefs.current.forEach(card => card.classList.remove("clicked"));
+                click = true
             }, 2000); // Adjust the delay as needed
         }
     }
@@ -170,7 +177,7 @@ function Cards({ numOfCards, cards, fetchRandomPokemon, setCards, setScore, best
     return (
         <>
             {cards.slice(0, numOfCards).map((card, index) => (
-                <div key={index} className={`card ${index}`} ref={el => (cardRefs.current[index] = el)}>
+                <div key={index} className={`card ${index}`} ref={el => (cardRefs.current[index] = el)} style={{display: cardDisplay}}>
                     <div className="box-content">
                         <div className="box-back"></div>
                         <div className="box-front" style={{ backgroundImage: `url(${card.url})` }}>
@@ -188,4 +195,12 @@ function resetGame(setScore, setClickedPokemon, fetchInitialImages){
         setClickedPokemon([]);
         fetchInitialImages();
     
+}
+
+function restartOnclick(fetchInitialImages, setDisplay, setCardDisplay){
+    
+    fetchInitialImages();
+    setDisplay('none')
+    setCardDisplay('block')
+    click = true
 }
